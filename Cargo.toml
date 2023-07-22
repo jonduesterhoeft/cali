@@ -1,0 +1,17 @@
+[package]
+name = "cali"
+authors = ["Jon Duesterhoeft <jon.duesterhoeft@gmail.com>"]
+version = "0.1.1"
+about = "A simple command line calendar implemented in Rust."
+description = "A simple command line calendar implemented in Rust."
+edition = "2021"
+readme = "README.md"
+repository = "https://github.com/jonduesterhoeft/cali"
+license = "MIT"
+license_file = "LICENSE"
+keywords = ["cli", "calendar", "todo", "utility"]
+exclude = ["/.github"]
+
+[dependencies]
+clap = { version = "4.0", features = ["derive"] }
+sqlite = { version = "0.31.0"}
