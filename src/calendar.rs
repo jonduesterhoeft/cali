@@ -13,7 +13,7 @@ pub struct Calendar {
 impl Calendar {
     pub fn new(name: &str) -> Result<Calendar, Box<dyn Error>> {
         let path = PathBuf::from("calendar.db");
-        database_setup(&path).unwrap();
+        init_database(&path).unwrap();
         check_existing_calendar(&path, &name)?;
         let existing_default = check_existing_default(&path)?;
 
