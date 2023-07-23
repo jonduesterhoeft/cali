@@ -13,5 +13,7 @@ keywords = ["cli", "calendar", "todo", "utility"]
 exclude = ["/.github"]
 
 [dependencies]
+chrono = { version = "0.4.26" }
+chrono-tz = "0.8.3"
 clap = { version = "4.0", features = ["derive"] }
-sqlite = { version = "0.31.0"}
+rusqlite = { version = "0.25.0", features = ["bundled"] }
