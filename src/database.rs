@@ -3,7 +3,7 @@ use std::error::Error;
 use rusqlite::{params, Connection, Result};
 use crate::cali_error::CalendarExistsError;
 
-pub fn database_setup(path: &PathBuf) -> Result<(), Box<dyn Error>> {
+pub fn init_database(path: &PathBuf) -> Result<(), Box<dyn Error>> {
     let conn = Connection::open(path)?;
 
     // Create the calendar table if it doesn't already exist
@@ -36,7 +36,7 @@ pub fn check_existing_calendar(path: &PathBuf, name: &str) -> Result<(), Box<dyn
     Ok(())
 }
 
-// Check if there are any calendars set as default
+// Checks if there is a calendar set as default
 pub fn check_existing_default(path: &PathBuf) -> Result<bool, Box<dyn Error>> {
     let conn = Connection::open(path)?;
     let mut default_query = conn.prepare("SELECT is_default FROM calendars WHERE is_default <> 0")?;
@@ -47,6 +47,19 @@ pub fn check_existing_default(path: &PathBuf) -> Result<bool, Box<dyn Error>> {
     } else {
         Ok(false)
     }
+}
+
+// Udpates the specified calendar to be the default
+pub fn update_default(path: &PathBuf, new_default: &str) -> Result<(), Box<dyn Error>> {
+    let conn = Connection::open(path)?;
+    // Reset calendar currently set to be the default
+    let mut remove_current = conn.prepare("UPDATE calendars SET is_default = 0 WHERE is_default <> 0")?;
+    remove_current.execute(params![])?;
+    // Set the specified calendar as the new default
+    let mut update_default = conn.prepare("UPDATE calendars SET is_default = 1 WHERE calendar_name == ?1")?;
+    update_default.execute(params![new_default])?;
+
+    Ok(())
 }
 
 // Test helper function to insert a row with calendar_name of "test_calendar"
@@ -88,7 +101,7 @@ mod tests {
     #[test]
     fn test_new_database() {
         let path = PathBuf::from("tests/test.db");
-        let result = database_setup(&path);
+        let result = init_database(&path);
         assert!(result.is_ok());
     }
 
@@ -96,6 +109,7 @@ mod tests {
     fn test_check_existing_calendar_does_exist() {
         let name = "test calendar";
         let path = PathBuf::from("tests/test.db");
+        init_database(&path).unwrap();
         remove_test_calendar(&path, name).unwrap();
         insert_test_calendar(&path, name, false).unwrap();
         let result = check_existing_calendar(&path, name);
@@ -107,6 +121,7 @@ mod tests {
     fn test_check_existing_calendar_does_not_exist() {
         let name = "test calendar";
         let path = PathBuf::from("tests/test.db");
+        init_database(&path).unwrap();
         remove_test_calendar(&path, name).unwrap();
         let name = "test_calendar";
         let result = check_existing_calendar(&path, name);
@@ -117,6 +132,7 @@ mod tests {
     fn test_check_existing_default_does_exist() {
         let name = "test calendar";
         let path = PathBuf::from("tests/test.db");
+        init_database(&path).unwrap();
         remove_test_calendar(&path, name).unwrap();
         insert_test_calendar(&path, name, true).unwrap();
         let result = check_existing_default(&path).unwrap();
@@ -128,6 +144,7 @@ mod tests {
     fn test_check_existing_default_does_not_exist() {
         let name = "test calendar";
         let path = PathBuf::from("tests/test.db");
+        init_database(&path).unwrap();
         remove_test_calendar(&path, name).unwrap();
         insert_test_calendar(&path, name, false).unwrap();
         let result = check_existing_default(&path).unwrap();
