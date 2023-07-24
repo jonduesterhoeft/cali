@@ -1,38 +1,55 @@
+use crate::{database::*, event::*, cali_error::*};
+
 use std::path::PathBuf;
 use std::error::Error;
-use crate::database::*;
-use crate::time::*;
+
 
 pub struct Calendar {
     name: String,
     default: bool,
-    offset: (i32, i32),
     path: PathBuf,
 }
 
 impl Calendar {
+    
     pub fn new(name: &str) -> Result<Calendar, Box<dyn Error>> {
         let path = PathBuf::from("calendar.db");
         init_database(&path).unwrap();
-        check_existing_calendar(&path, &name)?;
-        let existing_default = check_existing_default(&path)?;
+        if check_calendar(&path, &name)? {
+            return Err(Box::new(CalendarExistsError));
+        }
+        let existing_default = get_default(&path)?;
 
-        let new_calendar = Calendar { 
+        Ok(Calendar { 
             name: name.to_string(), 
-            default: !existing_default, 
-            offset: get_local_offset(), 
-            path: path 
-        };
+            default: existing_default.is_none(), 
+            path 
+        })
+    }
 
-        Ok(new_calendar)
+    pub fn from(name: &str) -> Result<Calendar, Box<dyn Error>> {
+        let path = PathBuf::from("calendar.db");
+        init_database(&path).unwrap();
+
+        if check_calendar(&path, name)? {
+            Calendar::from_existing(name)
+        } else {
+            Calendar::new(name)
+        }
+    }
+
+    fn from_existing(name: &str) -> Result<Calendar, Box<dyn Error>> {
+        let path = PathBuf::from("calendar.db");
+
+        Ok( Calendar { 
+            name: name.to_string(), 
+            default: check_default(&path, name).unwrap(),
+            path 
+        })
     }
 
     pub fn get_name(&self) -> &str {
         &self.name
-    }
-
-    pub fn get_offset(&self) -> &(i32, i32) {
-        &self.offset
     }
 
     pub fn get_default(&self) -> &bool {
@@ -43,9 +60,20 @@ impl Calendar {
         &self.path
     }
 
-    // pub fn add_event(&mut self, event: Event<Tz>) -> Option<&Event<Tz>> {
+    pub fn add_event(&self, event: &Event) -> Result<(), Box<dyn Error>> {
+        insert_event(&self, &event)?;
+        Ok(())
+    }
 
-    // }
+    pub fn update_event(&self, event: &Event) -> Result<(), Box<dyn Error>> {
+        update_event(&self, &event)?;
+        Ok(())
+    }
+
+    pub fn remove_event(&self, event: &Event) -> Result<(), Box<dyn Error>> {
+        remove_event(&self, &event)?;
+        Ok(())
+    }
 
     // pub fn next_event(&self) -> Option<&Event<Tz>> {
 

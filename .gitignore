@@ -19,3 +19,4 @@ Cargo.lock
 /target
 
 calendars.db
+/tests/test.db
