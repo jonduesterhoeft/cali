@@ -111,6 +111,51 @@ pub fn insert_event(calendar: &Calendar, event: &Event) -> Result<()> {
     Ok(())
 }
 
+// Reads an existing event from the database
+pub fn get_event(calendar: &Calendar, name: &str, exact: bool) -> Result<Vec<Event>, Box<dyn Error>> {
+    let conn = Connection::open(calendar.get_path())?;
+
+    let get_query = if exact {
+        "SELECT * FROM calendars WHERE calendar_name = ?1 AND event_name = ?2"
+    } else {
+        "SELECT * FROM calendars WHERE calendar_name = ?1 AND event_name LIKE %2"
+    };
+
+    let event_name = if exact {
+        name.to_string()
+    } else {
+        format!("%{}%", name)
+    };
+
+    let mut stmt = conn.prepare(get_query)?;
+    let event_iter = stmt.query_map(params![calendar.get_name(), event_name], |row| {
+        let id: String = row.get("event_id")?;
+        let name: String = row.get("event_name")?;
+        let start: String = row.get("event_state")?;
+        let end: String = row.get("event_end")?;
+        let recurring_str: String = row.get("event_recurring")?;
+
+        // Parse the recurring field from the database string representation into the Recurring enum
+        let recurring = match recurring_str.as_str() {
+            "No" => Recurring::No,
+            "Daily" => Recurring::Daily,
+            "Weekly" => Recurring::Weekly,
+            "Monthly" => Recurring::Monthly,
+            "Yearly" => Recurring::Yearly,
+            _ => Recurring::No, // Handle unknown values, you may want to adjust this based on your data
+        };
+
+        Ok(Event::from(&id, &name, &start, &end, recurring))
+    })?;
+
+    let mut events = Vec::new();
+    for event_result in event_iter {
+        events.push(event_result?);
+    }
+
+    Ok(events)
+}
+
 // Updates an existing event in the database
 pub fn update_event(calendar: &Calendar, event: &Event) -> Result<()> {
     let conn = Connection::open(calendar.get_path())?;

@@ -28,7 +28,6 @@ pub struct Event {
     name: String,
     start: String,
     end: String,
-    offset: (i32, i32),
     recurring: Recurring,
 }
 
@@ -39,7 +38,16 @@ impl Event {
             name: name.to_string(), 
             start: start.to_string(), 
             end: end.to_string(), 
-            offset: get_local_offset(),
+            recurring,
+        }
+    }
+
+    pub fn from(id: &str, name: &str, start: &str, end: &str, recurring: Recurring) -> Event {
+        Event { 
+            id: Uuid::parse_str(id).unwrap(),
+            name: name.to_string(), 
+            start: start.to_string(), 
+            end: end.to_string(), 
             recurring,
         }
     }
@@ -58,10 +66,6 @@ impl Event {
 
     pub fn get_end(&self) -> &str {
         &self.end
-    }
-
-    pub fn get_offset(&self) -> &(i32, i32) {
-        &self.offset
     }
 
     pub fn get_recurring(&self) -> &Recurring {
