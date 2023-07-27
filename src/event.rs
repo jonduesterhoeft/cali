@@ -3,6 +3,7 @@ use std::fmt;
 use std::error::Error;
 use uuid::Uuid;
 
+#[derive(Debug, PartialEq)]
 pub enum Recurring {
     No,
     Daily,

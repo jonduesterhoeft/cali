@@ -12,8 +12,7 @@ pub struct Calendar {
 
 impl Calendar {
     
-    pub fn new(name: &str) -> Result<Calendar, Box<dyn Error>> {
-        let path = PathBuf::from("calendar.db");
+    pub fn new(name: &str, path: &PathBuf) -> Result<Calendar, Box<dyn Error>> {
         init_database(&path).unwrap();
         if check_calendar(&path, &name)? {
             return Err(Box::new(CalendarExistsError));
@@ -23,28 +22,25 @@ impl Calendar {
         Ok(Calendar { 
             name: name.to_string(), 
             default: existing_default.is_none(), 
-            path 
+            path: path.to_path_buf()
         })
     }
 
-    pub fn from(name: &str) -> Result<Calendar, Box<dyn Error>> {
-        let path = PathBuf::from("calendar.db");
+    pub fn from(name: &str, path: &PathBuf) -> Result<Calendar, Box<dyn Error>> {
         init_database(&path).unwrap();
 
         if check_calendar(&path, name)? {
-            Calendar::from_existing(name)
+            Calendar::from_existing(name, path)
         } else {
-            Calendar::new(name)
+            Calendar::new(name, path)
         }
     }
 
-    fn from_existing(name: &str) -> Result<Calendar, Box<dyn Error>> {
-        let path = PathBuf::from("calendar.db");
-
+    fn from_existing(name: &str, path: &PathBuf) -> Result<Calendar, Box<dyn Error>> {
         Ok( Calendar { 
             name: name.to_string(), 
             default: check_default(&path, name).unwrap(),
-            path 
+            path: path.to_path_buf()
         })
     }
 

@@ -1,7 +1,5 @@
 
-use crate::calendar::*;
-use crate::event::*;
-
+use crate::{calendar::*, event::*};
 use std::path::PathBuf;
 use std::error::Error;
 use rusqlite::{params, Connection, Result};
@@ -43,9 +41,7 @@ pub fn check_calendar(path: &PathBuf, name: &str) -> Result<bool, Box<dyn Error>
     }
 }
 
-
-
-// Checks if there is a calendar by the specified name
+// Checks if there is an existing calendar set to default
 pub fn check_default(path: &PathBuf, name: &str) -> Result<bool, Box<dyn Error>> {
     let conn = Connection::open(path)?;
     let check_name: Result<String> = conn.query_row(
@@ -118,7 +114,7 @@ pub fn get_event(calendar: &Calendar, name: &str, exact: bool) -> Result<Vec<Eve
     let get_query = if exact {
         "SELECT * FROM calendars WHERE calendar_name = ?1 AND event_name = ?2"
     } else {
-        "SELECT * FROM calendars WHERE calendar_name = ?1 AND event_name LIKE %2"
+        "SELECT * FROM calendars WHERE calendar_name = ?1 AND event_name LIKE ?2"
     };
 
     let event_name = if exact {
@@ -131,7 +127,7 @@ pub fn get_event(calendar: &Calendar, name: &str, exact: bool) -> Result<Vec<Eve
     let event_iter = stmt.query_map(params![calendar.get_name(), event_name], |row| {
         let id: String = row.get("event_id")?;
         let name: String = row.get("event_name")?;
-        let start: String = row.get("event_state")?;
+        let start: String = row.get("event_start")?;
         let end: String = row.get("event_end")?;
         let recurring_str: String = row.get("event_recurring")?;
 
@@ -192,110 +188,4 @@ pub fn remove_event(calendar: &Calendar, event: &Event) -> Result<()> {
     )?;
 
     Ok(())
-}
-
-
-
-
-// HELPER METHODS
-
-// Inserts a row with calendar_name of "test_calendar"
-pub fn insert_test_calendar(path: &PathBuf, name: &str, set_default: bool) -> Result<()> {
-    let conn = Connection::open(path)?;
-    // Insert a row with calendar_name "test_calendar"
-    conn.execute(
-        "INSERT INTO calendars (calendar_name, event_id, event_name, event_start, event_end, event_recurring, is_default) 
-        VALUES (?1, '1', 'Test Event', '2023-07-23', '2023-07-25', 0, ?2)",
-        params![name, set_default],
-    )?;
-
-    Ok(())
-}
-
-// Removes the row with calendar_name of "test_calendar"
-pub fn remove_test_calendar(path: &PathBuf, name: &str) -> Result<()> {
-    let conn = Connection::open(path)?;
-
-    // Check if the "calendars" table exists
-    if let Ok(table_exists) = conn.query_row(
-        "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'calendars'",
-        params![],
-        |_| Ok(true),
-    ) {
-        // If the table exists, execute the DELETE statement
-        if table_exists {
-            conn.execute("DELETE FROM calendars WHERE calendar_name = ?1", params![name])?;
-        }
-    }
-
-    Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_new_database() {
-        let path = PathBuf::from("tests/test.db");
-        let result = init_database(&path);
-        assert!(result.is_ok());
-    }
-
-    #[test]
-    fn test_verify_calendar_does_exist() {
-        let name = "test calendar";
-        let path = PathBuf::from("tests/test.db");
-        init_database(&path).unwrap();
-        remove_test_calendar(&path, name).unwrap();
-        insert_test_calendar(&path, name, false).unwrap();
-        let result = check_calendar(&path, name);
-        assert!(result.unwrap());
-        remove_test_calendar(&path, name).unwrap();
-    }
-
-    #[test]
-    fn test_verify_calendar_does_not_exist() {
-        let name = "test calendar";
-        let path = PathBuf::from("tests/test.db");
-        init_database(&path).unwrap();
-        remove_test_calendar(&path, name).unwrap();
-        let result = check_calendar(&path, name);
-        assert!(!result.unwrap());
-    }
-
-    #[test]
-    fn test_get_default_does_exist() {
-        let path = PathBuf::from("tests/test.db");
-        init_database(&path).unwrap();
-
-        let new_calendar = "new calendar";
-        remove_test_calendar(&path, new_calendar).unwrap();
-        insert_test_calendar(&path, new_calendar, false).unwrap();
-
-
-        let default_calendar = "default calendar";
-        remove_test_calendar(&path, default_calendar).unwrap();
-        insert_test_calendar(&path, default_calendar, true).unwrap();
-
-        let result = get_default(&path).unwrap();
-        assert_eq!(result, Some(default_calendar.to_string()));
-        remove_test_calendar(&path, new_calendar).unwrap();
-        remove_test_calendar(&path, default_calendar).unwrap();
-    }
-
-    #[test]
-    fn test_get_default_does_not_exist() {
-        let path = PathBuf::from("tests/test.db");
-        init_database(&path).unwrap();
-
-        let new_calendar = "new calendar";
-        remove_test_calendar(&path, new_calendar).unwrap();
-        insert_test_calendar(&path, new_calendar, false).unwrap();
-
-        let result = get_default(&path).unwrap();
-        assert_eq!(result, None);
-        remove_test_calendar(&path, new_calendar).unwrap();
-    }
-
 }
