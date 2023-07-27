@@ -8,7 +8,6 @@
 pub mod calendar;
 pub mod event;
 pub mod time;
-pub mod database;
 pub mod cali_error;
 // use clap::Parser;
 

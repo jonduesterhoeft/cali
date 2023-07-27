@@ -1,4 +1,4 @@
-use cali::{calendar::*, event::*, database::*};
+use cali::{calendar::*, event::*};
 use std::path::PathBuf;
 use rusqlite::{params, Connection, Result};
 
@@ -249,6 +249,7 @@ fn test_new_insert_get_nonexact_event_success() {
     assert_eq!(got_event[0].get_start(), "start_time");
     assert_eq!(got_event[0].get_end(), "end_time");
     assert_eq!(got_event[0].get_recurring(), &Recurring::No);
+    remove_all_calendars(&path).unwrap();
 }
 
 #[test]
@@ -275,6 +276,7 @@ fn test_new_insert_get_multiple_nonexact_event_success() {
     assert_eq!(got_event[1].get_name(), event_name2);
     assert_ne!(got_event[0].get_name(), got_event[1].get_name());
     assert_ne!(got_event[0].get_id(), got_event[1].get_id());
+    remove_all_calendars(&path).unwrap();
 }
 
 #[test]
@@ -303,6 +305,7 @@ fn test_new_insert_update_get_exact_event_success() {
     assert_eq!(got_event[0].get_start(), new_start);  // Verify update
     assert_eq!(got_event[0].get_end(), "end_time"); 
     assert_eq!(got_event[0].get_recurring(), &Recurring::No);
+    remove_all_calendars(&path).unwrap();
 }
 
 #[test]
@@ -328,4 +331,5 @@ fn test_new_insert_get_multiple_nonexact_delete_event_success() {
     // Check values
     assert_eq!(got_event.len(), 1); 
     assert_eq!(got_event[0].get_name(), event_name1);
+    remove_all_calendars(&path).unwrap();
 }

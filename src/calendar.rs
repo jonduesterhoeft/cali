@@ -1,7 +1,7 @@
-use crate::{database::*, event::*, cali_error::*};
-
+use crate::{event::*, cali_error::*};
 use std::path::PathBuf;
 use std::error::Error;
+use rusqlite::{params, Connection, Result};
 
 
 pub struct Calendar {
@@ -79,4 +79,87 @@ impl Calendar {
     // ) -> impl Iterator<Item = &Event<Tz>> {
 
     // }
+}
+
+
+// Create the calendar table if it doesn't already exist
+pub fn init_database(path: &PathBuf) -> Result<(), Box<dyn Error>> {
+    let conn = Connection::open(path)?;
+
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS calendars (
+            event_id TEXT NOT NULL,
+            calendar_name TEXT NOT NULL,
+            event_name TEXT NOT NULL,
+            event_start TEXT NOT NULL,
+            event_end TEXT NOT NULL,
+            event_recurring TEXT NOT NULL,
+            is_default INTEGER NOT NULL
+        )",
+        params![],
+    )?;
+
+    Ok(())
+}
+
+// Checks if there is a calendar by the specified name
+pub fn check_calendar(path: &PathBuf, name: &str) -> Result<bool, Box<dyn Error>> {
+    let conn = Connection::open(path)?;
+    let check_name: Result<String> = conn.query_row(
+        "SELECT calendar_name FROM calendars WHERE calendar_name = ?1",
+        params![name],
+        |row| row.get(0),
+    );
+
+    match check_name {
+        Ok(_) => Ok(true),
+        Err(rusqlite::Error::QueryReturnedNoRows) => Ok(false),
+        Err(e) => Err(Box::new(e)),
+    }
+}
+
+// Checks if there is an existing calendar set to default
+pub fn check_default(path: &PathBuf, name: &str) -> Result<bool, Box<dyn Error>> {
+    let conn = Connection::open(path)?;
+    let check_name: Result<String> = conn.query_row(
+        "SELECT is_default FROM calendars WHERE calendar_name = ?1 AND is_default = 1",
+        params![name],
+        |row| row.get(0),
+    );
+
+    match check_name {
+        Ok(_) => Ok(true),
+        Err(rusqlite::Error::QueryReturnedNoRows) => Ok(false),
+        Err(e) => Err(Box::new(e)),
+    }
+}
+
+// Gets the name of the default calendar
+pub fn get_default(path: &PathBuf) -> Result<Option<String>, Box<dyn Error>> {
+    let conn = Connection::open(path)?;
+
+    let default_calendar_name: Result<Option<String>> = conn.query_row(
+        "SELECT calendar_name FROM calendars WHERE is_default = 1",
+        params![],
+        |row| row.get(0),
+    );
+
+    match default_calendar_name {
+        Ok(name) => Ok(name),
+        Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
+        Err(e) => Err(Box::new(e)),
+    }
+}
+
+// Udpates the specified calendar to be the default
+pub fn update_default(path: &PathBuf, new_default: &str) -> Result<(), Box<dyn Error>> {
+    let conn = Connection::open(path)?;
+    // Reset calendar currently set to be the default
+    let mut remove_current = conn.prepare("UPDATE calendars SET is_default = 0 WHERE is_default <> 0")?;
+    remove_current.execute(params![])?;
+    // Set the specified calendar as the new default
+    let mut update_default = conn.prepare("UPDATE calendars SET is_default = 1 WHERE calendar_name = ?1")?;
+    update_default.execute(params![new_default])?;
+
+    Ok(())
 }
