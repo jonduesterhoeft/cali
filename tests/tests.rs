@@ -106,6 +106,19 @@ fn test_verify_calendar_does_exist() {
 }
 
 #[test]
+fn test_delete_calendar_success() {
+    let name = "test calendar";
+    let path = PathBuf::from("tests/test.db");
+    let set_default = false;
+    clean_insert_test_calendar(&path, &name, set_default).unwrap();
+    let calendar = Calendar::from(name, &path).unwrap();
+    remove_calendar(&calendar).unwrap();
+    let result = check_calendar(&path, name);
+    assert!(!result.unwrap());
+    remove_all_calendars(&path).unwrap();
+}
+
+#[test]
 fn test_verify_calendar_does_not_exist() {
     let name = "test calendar";
     let path = PathBuf::from("tests/test.db");
@@ -134,6 +147,17 @@ fn test_get_default_does_not_exist() {
     let result = get_default(&path).unwrap();
     assert_eq!(result, None);
     remove_all_calendars(&path).unwrap();
+}
+
+#[test]
+fn test_default_empty_database() {
+    let path = PathBuf::from("tests/test.db");
+    remove_all_calendars(&path).unwrap();
+    let new_calendar = "test calendar";
+    let result_check = check_default(&path, new_calendar).unwrap();
+    assert_eq!(result_check, false);
+    let result_get = get_default(&path).unwrap();
+    assert_eq!(result_get, None);
 }
 
 #[test]

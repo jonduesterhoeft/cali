@@ -56,6 +56,12 @@ impl Calendar {
         &self.path
     }
 
+    pub fn update_name(&mut self, new_name: &str) -> Result<(), Box<dyn Error>> {
+        rename_calendar(self, new_name)?;
+        self.name = new_name.to_string();
+        Ok(())
+    }
+
     pub fn add_event(&self, event: &Event) -> Result<(), Box<dyn Error>> {
         insert_event(&self, &event)?;
         Ok(())
@@ -118,7 +124,7 @@ pub fn check_calendar(path: &PathBuf, name: &str) -> Result<bool, Box<dyn Error>
     }
 }
 
-// Checks if there is an existing calendar set to default
+// Checks if an existing calendar set to default
 pub fn check_default(path: &PathBuf, name: &str) -> Result<bool, Box<dyn Error>> {
     let conn = Connection::open(path)?;
     let check_name: Result<String> = conn.query_row(
@@ -160,6 +166,28 @@ pub fn update_default(path: &PathBuf, new_default: &str) -> Result<(), Box<dyn E
     // Set the specified calendar as the new default
     let mut update_default = conn.prepare("UPDATE calendars SET is_default = 1 WHERE calendar_name = ?1")?;
     update_default.execute(params![new_default])?;
+
+    Ok(())
+}
+
+// Removes an existing calendar from the database
+pub fn remove_calendar(calendar: &Calendar) -> Result<()> {
+    let conn = Connection::open(calendar.get_path())?;
+    conn.execute(
+        "DELETE FROM calendars WHERE calendar_name = ?1",
+        params![calendar.get_name().to_string()],
+    )?;
+
+    Ok(())
+}
+
+// Renames an existing calendar in the database
+pub fn rename_calendar(calendar: &Calendar, new_name: &str) -> Result<()> {
+    let conn = Connection::open(calendar.get_path())?;
+    conn.execute(
+        "UPDATE calendars SET calendar_name = ?2 WHERE calendar_name = ?1",
+        params![calendar.get_name().to_string(), new_name.to_string()],
+    )?;
 
     Ok(())
 }
